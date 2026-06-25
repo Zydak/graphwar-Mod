@@ -1,3 +1,6 @@
+# How To Download
+Either clone the project and build by yourself using compile.sh script or download the [File.zip](https://github.com/Zydak/graphwar-Mod/releases/download/1.0/Files.zip) inside [releases](https://github.com/Zydak/graphwar-Mod/releases/tag/1.0), unzip, and run with `java -jar graphwar.jar`.
+
 # Mod Menu Overview
 
 ## Graph Plane
