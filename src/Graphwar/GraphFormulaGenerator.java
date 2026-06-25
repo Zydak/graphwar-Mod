@@ -288,7 +288,7 @@ public class GraphFormulaGenerator {
      * 
      * @param waypoints List of target points (x, y) to hit
      * @param obstacles List of obstacles with (x, y, radius)
-     * @param clearance Safety margin around obstacles (default 0.35)
+     * @param clearance Safety margin around obstacles (default 0.1)
      * @return Mathematical formula string, or null if no valid path found
      */
     public static String generateFormula(List<Point> waypoints, List<Circle> obstacles, double clearance) {
