@@ -5,6 +5,7 @@ import javax.swing.*;
 import GraphServer.Constants;
 import Graphwar.GraphFormulaGenerator.Circle;
 import Graphwar.GraphFormulaGenerator.Point;
+import Graphwar.GraphFormulaGenerator.GameMode;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -15,9 +16,13 @@ public class ModMenu
     private static JFrame m_Frame;
     private static GameMapPanel m_MapPanel;
     private static JTextField functionInput;
+    private static JTextField parsedFunctionInput;
     private static GameData gameData;
     private static JCheckBox intersectAlliesCheckbox;
     private static JCheckBox intersectEnemiesCheckbox;
+    private static JCheckBox drawingModeCheckbox;
+    private static JButton generateButton;
+    private static JButton clearPointsButton;
 
     public static void open()
     {
@@ -31,7 +36,10 @@ public class ModMenu
 
         // Function input panel
         JPanel functionPanel = new JPanel();
+        functionPanel.setLayout(new BoxLayout(functionPanel, BoxLayout.Y_AXIS));
         functionInput = new JTextField(30);
+        parsedFunctionInput = new JTextField(30);
+        parsedFunctionInput.setEditable(false);
 
         functionInput.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
@@ -51,6 +59,7 @@ public class ModMenu
 
             private void updateFunction() {
                 String functionStr = ModMenu.additionalParsing(functionInput.getText());
+                parsedFunctionInput.setText(functionStr);
                 m_MapPanel.setFunctionToDraw(functionStr);
             }
         });
@@ -69,10 +78,43 @@ public class ModMenu
             m_MapPanel.setFunctionToDraw("");
         });
 
-        functionPanel.add(new JLabel("Function: "));
-        functionPanel.add(functionInput);
-        functionPanel.add(sendButton);
-        functionPanel.add(clearButton);
+        JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        row1.add(new JLabel("Function: "));
+        row1.add(functionInput);
+        row1.add(sendButton);
+        row1.add(clearButton);
+        
+        // Add enum with Y, Y', Y'' and a dropdown to select the mode
+        JComboBox<GameMode> modeDropdown = new JComboBox<>(GameMode.values());
+        modeDropdown.setSelectedItem(GameMapPanel.currentMode);
+        modeDropdown.addActionListener(e -> {
+            GameMapPanel.setGameMode((GameMode) modeDropdown.getSelectedItem());
+            m_MapPanel.repaint();
+
+            // Disable function generator for Y''
+            if (GameMapPanel.currentMode == GameMode.Y_DOUBLE_PRIME) {
+                intersectAlliesCheckbox.setEnabled(false);
+                intersectEnemiesCheckbox.setEnabled(false);
+                generateButton.setEnabled(false);
+                drawingModeCheckbox.setEnabled(false);
+                clearPointsButton.setEnabled(false);
+            } else {
+                intersectAlliesCheckbox.setEnabled(true);
+                intersectEnemiesCheckbox.setEnabled(true);
+                generateButton.setEnabled(true);
+                drawingModeCheckbox.setEnabled(true);
+                clearPointsButton.setEnabled(true);
+            }
+        });
+        row1.add(new JLabel("Mode: "));
+        row1.add(modeDropdown);
+
+        JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        row2.add(new JLabel("Parsed Function: "));
+        row2.add(parsedFunctionInput);
+
+        functionPanel.add(row1);
+        functionPanel.add(row2);
 
         // Generate function panel
         JPanel generatePanel = new JPanel();
@@ -82,15 +124,15 @@ public class ModMenu
         intersectEnemiesCheckbox = new JCheckBox("Intersect Enemies");
         intersectEnemiesCheckbox.setSelected(true);
 
-        JCheckBox drawingModeCheckbox = new JCheckBox("Drawing Mode");
+        drawingModeCheckbox = new JCheckBox("Drawing Mode");
         drawingModeCheckbox.addActionListener(e -> {
             m_MapPanel.setDrawingMode(drawingModeCheckbox.isSelected());
         });
 
-        JButton generateButton = new JButton("Generate");
+        generateButton = new JButton("Generate");
         generateButton.addActionListener(e -> generateFunction());
 
-        JButton clearPointsButton = new JButton("Clear Points");
+        clearPointsButton = new JButton("Clear Points");
         clearPointsButton.addActionListener(e -> m_MapPanel.clearDrawnPoints());
 
         generatePanel.add(intersectAlliesCheckbox);
@@ -209,7 +251,7 @@ public class ModMenu
         List<Circle> circles = GameMapPanel.obstacles;
 
         // Generate formula
-        String formula = GraphFormulaGenerator.generateFormula(waypoints, circles);
+        String formula = GraphFormulaGenerator.generateFormula(waypoints, circles, GameMapPanel.currentMode);
 
         // Set in textbox
         if (!formula.isEmpty())
@@ -289,6 +331,8 @@ public class ModMenu
         private static final int PLANE_DRAW_WIDTH = 770;
         private static final int PLANE_DRAW_HEIGHT = 450;
 
+        private static GameMode currentMode = GameMode.Y; // Default to normal y
+
         public static List<Player> players = new ArrayList<>();
         public static List<GraphFormulaGenerator.Circle> obstacles = new ArrayList<>();
         private Function function = null;
@@ -296,6 +340,10 @@ public class ModMenu
         public static Soldier selectedSoldier = null;
         private boolean drawingMode = false;
         private List<Point> drawnPoints = new ArrayList<Point>();
+
+        public static void setGameMode(GameMode mode) {
+            currentMode = mode;
+        }
 
         public GameMapPanel()
         {
@@ -445,6 +493,12 @@ public class ModMenu
 
         private double calculateOffsetForSelectedSoldier()
         {
+            // If we are in y' or y'' mode, integration fixes the trajectory onto the soldier automatically
+            if (currentMode != GameMode.Y)
+            {
+                return 0.0;
+            }
+
             if (selectedSoldier == null || function == null)
             {
                 return 0.0;
@@ -652,55 +706,102 @@ public class ModMenu
             }
         }
 
-        private void drawFunction(Graphics2D g2d, int offsetX, int offsetY)
-        {
-            if (function == null)
-            {
-                return;
-            }
+        private void drawFunction(Graphics2D g2d, int offsetX, int offsetY) {
+            if (function == null) return;
 
             g2d.setColor(Color.GREEN);
-            g2d.setStroke(new BasicStroke(1.0f));
+            g2d.setStroke(new BasicStroke(1.5f));
 
-            PolishNotationFunction polishFunc = null;
-            try
-            {
-                polishFunc = function.getStringFunc() != null ?
-                    new PolishNotationFunction(function.getStringFunc()) : null;
-            }
-            catch (MalformedFunction e)
-            {
-                return;
-            }
+            PolishNotationFunction polishFunc;
+            try {
+                polishFunc = function.getStringFunc() != null ? new PolishNotationFunction(function.getStringFunc()) : null;
+            } catch (MalformedFunction e) { return; }
+            if (polishFunc == null) return;
 
-            if (polishFunc == null)
-            {
-                return;
-            }
-
-            // Evaluate function across x range
             double step = 0.1;
-            double prevX = X_MIN;
-            double prevY = polishFunc.evaluateFunction(prevX, 0, 0) + functionOffset;
+            int totalSteps = (int) ((X_MAX - X_MIN) / step) + 1;
+            double[] computedY = new double[totalSteps];
+            
+            double soldierX = (selectedSoldier != null) ? GraphFormulaGenerator.fieldToGame(selectedSoldier.getX(), selectedSoldier.getY())[0] : 0.0;
+            int soldierIdx = 0;
 
-            for (double x = X_MIN + step; x <= X_MAX; x += step)
-            {
-                double y = polishFunc.evaluateFunction(x, 0, 0) + functionOffset;
+            // --- PASS 1: Calculate the raw shape ---
+            double currentY = 0.0;
+            double currentSlope = 0.0;
+            int idx = 0;
 
-                int screenX1 = offsetX + gameToScreenX(prevX, PLANE_DRAW_WIDTH);
-                int screenY1 = offsetY + gameToScreenY(prevY, PLANE_DRAW_HEIGHT);
-                int screenX2 = offsetX + gameToScreenX(x, PLANE_DRAW_WIDTH);
-                int screenY2 = offsetY + gameToScreenY(y, PLANE_DRAW_HEIGHT);
+            for (double x = X_MIN; x <= X_MAX && idx < totalSteps; x += step) {
+                double fVal = polishFunc.evaluateFunction(x, 0, 0);
+                if (Double.isNaN(fVal) || Double.isInfinite(fVal)) fVal = 0.0;
 
-                // Only draw if values are valid
-                if (!Double.isNaN(prevY) && !Double.isInfinite(prevY) &&
-                    !Double.isNaN(y) && !Double.isInfinite(y))
-                {
-                    g2d.drawLine(screenX1, screenY1, screenX2, screenY2);
+                if (currentMode == GameMode.Y) {
+                    computedY[idx] = fVal;
+                } else if (currentMode == GameMode.Y_PRIME) {
+                    currentY += fVal * step;
+                    computedY[idx] = currentY;
+                } else if (currentMode == GameMode.Y_DOUBLE_PRIME) {
+                    currentSlope += fVal * step;
+                    currentY += currentSlope * step;
+                    computedY[idx] = currentY;
                 }
 
-                prevX = x;
-                prevY = y;
+                if (Math.abs(x - soldierX) < Math.abs((X_MIN + soldierIdx * step) - soldierX)) {
+                    soldierIdx = idx;
+                }
+                idx++;
+            }
+
+            // --- PASS 2: Calculate corrections based on the soldier's anchor ---
+            double verticalShift = 0.0;
+            double slopeCorrection = 0.0;
+
+            if (selectedSoldier != null) {
+                double[] soldierPos = GraphFormulaGenerator.fieldToGame(selectedSoldier.getX(), selectedSoldier.getY());
+                
+                if (currentMode == GameMode.Y) {
+                    verticalShift = functionOffset;
+                } else if (currentMode == GameMode.Y_PRIME) {
+                    verticalShift = soldierPos[1] - computedY[soldierIdx];
+                } else if (currentMode == GameMode.Y_DOUBLE_PRIME) {
+                    // In Pass 1, we accumulated a random slope by the time we hit the soldier.
+                    // We need to find what that slope was at the soldier's index to back-correct it.
+                    double slopeAtSoldier = 0.0;
+                    for (int i = 0; i <= soldierIdx; i++) {
+                        double fVal = polishFunc.evaluateFunction(X_MIN + (i * step), 0, 0);
+                        if (!Double.isNaN(fVal) && !Double.isInfinite(fVal)) slopeAtSoldier += fVal * step;
+                    }
+                    slopeCorrection = -slopeAtSoldier;
+                    
+                    // Calculate vertical shift incorporating the slope correction
+                    double uncorrectedSoldierY = computedY[soldierIdx] + (slopeCorrection * (soldierX - X_MIN));
+                    verticalShift = soldierPos[1] - uncorrectedSoldierY;
+                }
+            }
+
+            for (int i = 0; i < totalSteps - 1; i++) {
+                double x1 = X_MIN + (i * step);
+                double x2 = x1 + step;
+                
+                double y1 = computedY[i];
+                double y2 = computedY[i + 1];
+
+                // Apply linear slope correction for Y'' mode so the launch angle is 0 at the soldier
+                if (currentMode == GameMode.Y_DOUBLE_PRIME) {
+                    y1 += slopeCorrection * (x1 - X_MIN);
+                    y2 += slopeCorrection * (x2 - X_MIN);
+                }
+
+                y1 += verticalShift;
+                y2 += verticalShift;
+
+                if (Double.isNaN(y1) || Double.isInfinite(y1) || Double.isNaN(y2) || Double.isInfinite(y2)) continue;
+
+                g2d.drawLine(
+                    offsetX + gameToScreenX(x1, PLANE_DRAW_WIDTH),
+                    offsetY + gameToScreenY(y1, PLANE_DRAW_HEIGHT),
+                    offsetX + gameToScreenX(x2, PLANE_DRAW_WIDTH),
+                    offsetY + gameToScreenY(y2, PLANE_DRAW_HEIGHT)
+                );
             }
         }
 

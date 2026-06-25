@@ -14,6 +14,8 @@ public class GraphFormulaGenerator {
     // but in reality it's 15 to -14.22 because of the way it renders the graph plane
     private static final double Y_MIN = 15 - 450.0 * 50.0 / 770.0, Y_MAX = 15.0;
     private static final int COLS = 400, ROWS = 240;
+
+    public enum GameMode { Y, Y_PRIME, Y_DOUBLE_PRIME }
     
     private static final int[][] NEIGHBORS = {{1, 0}, {1, 1}, {1, -1}, {0, 1}, {0, -1}};
     
@@ -249,31 +251,39 @@ public class GraphFormulaGenerator {
         return String.format("%.6f*(abs(x-%.6f)-abs(x-%.6f))", dist, x1, x2).replace("--", "+");
     }
 
-    private static List<Point> mergeNearbyPoints(List<Point> points, double threshold) {
-        if (points.size() <= 2) return points;
+    private static String directLineYPrime(Point p1, Point p2) {
+        double x1 = p1.x, y1 = p1.y;
+        double x2 = p2.x, y2 = p2.y;
+        double dx = x2 - x1;
         
-        List<Point> result = new ArrayList<>();
-        result.add(points.get(0));
-        
-        for (int i = 1; i < points.size(); i++) {
-            Point last = result.get(result.size() - 1);
-            Point current = points.get(i);
-            
-            if (Math.hypot(last.x - current.x, last.y - current.y) > threshold) {
-                result.add(current);
-            }
-            // If points are within threshold, skip the current one (keep the last)
+        if (Math.abs(dx) < 1e-12) {
+            dx = verticalEps(y1, y2);
+            x2 = x1 + dx;
         }
         
-        return result;
+        // The required slope for this segment
+        double slope = (y2 - y1) / dx; 
+        
+        // Turn ON the slope at x1, and turn OFF the slope at x2
+        return String.format("(step(%.6f,%.6f)-step(%.6f,%.6f))", slope, x1, slope, x2);
     }
     
-    private static String waypointsToFormula(List<Point> waypoints) {
+    private static String waypointsToFormula(List<Point> waypoints, GameMode mode) {
         if (waypoints.size() < 2) return "";
         
         List<String> parts = new ArrayList<>();
         for (int i = 0; i < waypoints.size() - 1; i++) {
-            parts.add(directLine(waypoints.get(i), waypoints.get(i + 1)));
+            switch (mode) {
+                case Y:
+                    parts.add(directLine(waypoints.get(i), waypoints.get(i + 1)));
+                    break;
+                case Y_PRIME:
+                    parts.add(directLineYPrime(waypoints.get(i), waypoints.get(i + 1)));
+                    break;
+                case Y_DOUBLE_PRIME:
+                    // Impossible? idk
+                    break;
+            }
         }
 
         String formula = String.join("+", parts).replace("+-", "-");
@@ -291,7 +301,7 @@ public class GraphFormulaGenerator {
      * @param clearance Safety margin around obstacles (default 0.1)
      * @return Mathematical formula string, or null if no valid path found
      */
-    public static String generateFormula(List<Point> waypoints, List<Circle> obstacles, double clearance) {
+    public static String generateFormula(List<Point> waypoints, List<Circle> obstacles, GameMode mode, double clearance) {
         if (waypoints == null || waypoints.isEmpty()) return null;
         if (obstacles == null) obstacles = new ArrayList<>();
         if (clearance <= 0) clearance = DEFAULT_CLEARANCE;
@@ -343,14 +353,15 @@ public class GraphFormulaGenerator {
 
         //List<Point> mergedPath = mergeNearbyPoints(path, 0.25);
         
-        return waypointsToFormula(path);
+        return waypointsToFormula(path, mode);
     }
     
-    /**
-     * Convenience method with default clearance.
-     */
     public static String generateFormula(List<Point> waypoints, List<Circle> obstacles) {
-        return generateFormula(waypoints, obstacles, DEFAULT_CLEARANCE);
+        return generateFormula(waypoints, obstacles, GameMode.Y, DEFAULT_CLEARANCE);
+    }
+
+    public static String generateFormula(List<Point> waypoints, List<Circle> obstacles, GameMode mode) {
+        return generateFormula(waypoints, obstacles, mode, DEFAULT_CLEARANCE);
     }
     
     // Example usage
