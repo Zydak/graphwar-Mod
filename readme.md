@@ -1,3 +1,51 @@
+# Mod Menu Overview
+
+## Graph Plane
+
+### Function Preview
+You can input your function inside the mod menu which will draw a function preview. This way you can see whether your function will hit the target and adjust the formula if needed. And after you're done inputting your function you can send it to the game automatically with SEND button, no need to copy paste. Also note that for the preview to work properly you have to first select the soldier you want to shoot with.
+
+https://github.com/user-attachments/assets/7c22ef8c-81cd-426e-9788-49fab87fbffd
+
+---
+### Shortened Notation
+Another thing is support for shortened notation for common useful functions, for example spawning sin after certain x. So instead of typing `2sin(5x)/(1+exp(-10*(x-5)))` you can do `spsin(2, 5, 5)`.
+
+Currently supposed notations are:
+* `spsin(height, frequency, startPoint)` = `height*sin(frequency*x)/(1+exp(-100*(x-startPoint)))`
+* `step(height, startPoint)` = `height/(1+exp(-100*(x-startPoint)))`
+
+https://github.com/user-attachments/assets/0538ccaa-49d4-4777-9a68-fc39f20891c0
+
+https://github.com/user-attachments/assets/7ee69186-8602-47fc-bd41-45d5b39cfa6a
+
+
+
+
+
+## Graph Formula Generator
+
+Mod menu has functionality to automatically generate a math formula for intersecting as many given points as possible. It automatically fetches player positions form the game and generates a formula. 
+
+It works by sorting targets left to right (since a function can only go one direction on the x axis), then uses A* pathfinding to route around obstacles between each pair of targets. The resulting path is simplified to as few waypoints as possible, then converted into a formula using the `abs(x-a) - abs(x-b)` trick to activate each segment over the right x range.
+
+```java
+String formula = GraphFormulaGenerator.generateFormula(waypoints, obstacles);
+```
+
+You can also make you own path by selecting draw mode and clicking position manually
+
+https://github.com/user-attachments/assets/855dba81-4306-4fae-a46b-0f6ad22b4054
+
+https://github.com/user-attachments/assets/83672f8f-fddd-42de-b755-a122dce3b024
+
+https://github.com/user-attachments/assets/ed5e4a74-2cc1-402e-b1bc-5a5275337b65
+
+
+
+---
+# ORIGINAL README
+---
 
 # Graphwar Tutorial
 
