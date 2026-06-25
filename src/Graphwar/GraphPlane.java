@@ -233,6 +233,7 @@ public class GraphPlane extends JPanel implements ActionListener
 		
 		if(repaintBack)
 		{
+			ModMenu.updateMap(graphwar.getGameData().getPlayers(), graphwar.getGameData().GetObstacleCircles(), reversed);
 			drawBackground(backg, reversed);	//times[1] = System.nanoTime();
 			drawPlayersNames(backg, reversed);	///times[2] = System.nanoTime();	
 			drawCurrentPlayerMarker(backg, reversed);

@@ -547,6 +547,12 @@ public class GameScreen extends JPanel implements ActionListener, StartStopPanel
 			}
 		}
 
+		// Reopen mod menu with F2
+		if(e.getKeyCode() == KeyEvent.VK_F2)
+		{
+			ModMenu.ReopenWindow();
+		}
+
 		String function = funcField.getText();
 		graphwar.getGameData().sendFunctionPreview(function);
 	}

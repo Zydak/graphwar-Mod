@@ -29,6 +29,8 @@ import java.util.Queue;
 
 import GraphServer.Constants;
 import GraphServer.NetworkProtocol;
+import Graphwar.GraphFormulaGenerator.Circle;
+import Graphwar.GraphFormulaGenerator.Point;
 
 public class GameData implements Runnable
 {
@@ -299,6 +301,59 @@ public class GameData implements Runnable
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public List<Point> GetSoldierPositionCartesianPlane(int team)
+	{
+		List<Point> soldierPositions = new ArrayList<Point>();
+
+		for (Player player : players)
+		{
+			if (team == -1 || player.getTeam() == team)
+			{
+				for (Soldier soldier : player.getSoldiers())
+				{
+					if (soldier.isAlive())
+					{
+						int soldierX = soldier.getX();
+						int soldierY = soldier.getY();
+						double[] soldierGamePos = GraphFormulaGenerator.fieldToGame(soldierX, soldierY);
+
+						if (isTerrainReversed())
+						{
+							soldierGamePos[0] = -soldierGamePos[0];
+						}
+
+						soldierPositions.add(new Point(soldierGamePos[0], soldierGamePos[1]));
+					}
+				}
+			}
+		}
+
+		return soldierPositions;
+	}
+
+	public List<Point> GetSoldierPositionCartesianPlane()
+	{
+		return GetSoldierPositionCartesianPlane(-1);
+	}
+
+	public List<Circle> GetObstacleCircles()
+	{
+		List<Circle> circles = Obstacle.getCircles();
+
+		if (isTerrainReversed())
+		{
+			List<GraphFormulaGenerator.Circle> reversedObstacles = new ArrayList<>();
+            for (GraphFormulaGenerator.Circle circle : circles)
+            {
+                GraphFormulaGenerator.Circle copyCircle = new GraphFormulaGenerator.Circle(circle.x, circle.y, circle.radius);
+                reversedObstacles.add(copyCircle);
+            }
+			return reversedObstacles;
+		}
+
+		return circles;
 	}
 	
 	public void sendFunction(String function)

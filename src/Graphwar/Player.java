@@ -61,6 +61,25 @@ public class Player
 		
 		this.disconnected = false;
 	}
+
+	// Copy contructor
+	public Player(Player player)
+	{
+		this.name = player.name;		
+		this.team = player.team;	
+		this.numSoldiers = player.numSoldiers;
+		this.soldiers = new Soldier[Constants.MAX_SOLDIERS_PER_PLAYER];
+		for(int i=0; i<soldiers.length; i++)
+		{
+			soldiers[i] = new Soldier(player.soldiers[i]);
+		}
+		this.currentTurnSoldier = player.currentTurnSoldier;
+		this.localPlayer = player.localPlayer;
+		this.playerID = player.playerID;
+		this.color = player.color;
+		this.nameLength = player.nameLength;
+		this.disconnected = player.disconnected;
+	}
 	
 	public boolean isDisconnected()
 	{

@@ -35,6 +35,8 @@ public class Graphwar extends JFrame
 	public static void main(String[] args)
 	{
 		handleArgs(args);
+
+		ModMenu.open();
 		
 		Graphwar graphwar = new Graphwar();
 				
@@ -75,6 +77,7 @@ public class Graphwar extends JFrame
 		try 
 		{
 			gameData = new GameData(this);
+			ModMenu.setGameData(gameData);
 			globalClient = new GlobalClient(this);
 			graphUI = new GraphUI(this);			
 		}

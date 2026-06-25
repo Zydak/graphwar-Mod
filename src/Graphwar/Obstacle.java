@@ -21,13 +21,17 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import GraphServer.Constants;
+import Graphwar.GraphFormulaGenerator.Circle;
 
 public class Obstacle
 {
 	private	BufferedImage terrain;
 	private Graphics2D terrainGraphics;
+	static List<Circle> circles = new ArrayList<Circle>();
 	
 	int expX;
 	int expY;
@@ -46,11 +50,18 @@ public class Obstacle
 		
 		terrainGraphics.setColor(Color.BLACK);
 		
+		circles.clear();
 		for(int i=0; i<numCircles; i++)
 		{			
 			int x = circleInfo[3*i];
 			int y = circleInfo[3*i+1];
 			int radius = circleInfo[3*i+2];
+
+			// Transform to game coordinates
+			double[] transformedPos = GraphFormulaGenerator.fieldToGame(x, y);
+			double transformedRadius = radius * 50.0 / Constants.PLANE_LENGTH;
+
+			circles.add(new Circle(transformedPos[0], transformedPos[1], transformedRadius));
 			
 			terrainGraphics.fillOval(x-radius, y-radius, 2*radius, 2*radius);
 		}
@@ -63,6 +74,11 @@ public class Obstacle
 		expX = 0;
 		expY = 0;
 		expRadius = 0;
+	}
+
+	public static List<Circle> getCircles()
+	{
+		return circles;
 	}
 		
 	public static int getNumCircles()

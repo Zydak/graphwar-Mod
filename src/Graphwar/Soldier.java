@@ -23,8 +23,8 @@ import GraphServer.Constants;
 
 public class Soldier
 {
-	private int x;
-	private int y;
+	public int x;
+	public int y;
 	private double angle;
 	
 	private boolean alive;	
@@ -52,6 +52,20 @@ public class Soldier
 		this.exploding = false;
 		
 		this.function = "";
+	}
+
+	// Copy contructor
+	public Soldier(Soldier soldier)
+	{
+		this.x = soldier.x;
+		this.y = soldier.y;
+		
+		this.angle = soldier.angle;
+		
+		this.alive = soldier.alive;
+		this.exploding = soldier.exploding;
+		
+		this.function = soldier.function;
 	}
 	
 	public Soldier(int x, int y)
